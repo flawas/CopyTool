@@ -1,0 +1,1 @@
+Invoke-ps2exe .\CopyTool.ps1 .\CopyTool.exe
