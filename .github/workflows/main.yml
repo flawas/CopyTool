@@ -6,7 +6,7 @@ jobs:
     name: Run PSScriptAnalyzer on Windows
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@main
       - name: Install PSScriptAnalyzer module
         shell: powershell
         run: |
