@@ -1,18 +1,18 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+name: Build
+run-name: Build by @${{ github.actor }}
 on: [push]
 jobs:
   Run-PSScriptAnalyzer-on-Windows:
     name: Run PSScriptAnalyzer on Windows
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@main
       - name: Install PSScriptAnalyzer module
-        shell: pwsh
+        shell: powershell
         run: |
           Set-PSRepository PSGallery -InstallationPolicy Trusted
           Install-Module ps2exe
       - name: Get list of rules
-        shell: pwsh
+        shell: powershell
         run: |
-          . ps2exe script.ps1
+          . ps2exe build.ps1
