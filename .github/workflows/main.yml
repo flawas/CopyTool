@@ -1,5 +1,5 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+name: Build
+run-name: Build by @${{ github.actor }}
 on: [push]
 jobs:
   Run-PSScriptAnalyzer-on-Windows:
