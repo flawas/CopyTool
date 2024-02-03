@@ -106,11 +106,12 @@ function Get-CopyStatus() {
                 $sourceFolderSelect.Enabled = $true
                 $SourceFolderName = Get-FolderName -Source $SourceFolder.Text
                 $TestFolder = $DestinationFolder.text + $SourceFolderName
-                $TargetDirecotryFileCountDirectory = Get-FolderInfoDirectory -folderPath $TestFolder
-                $TargetDirectoryFileCountFile = Get-FolderInfoFiles -folderPath $TestFolder
+                $TargetDirecotryFileCountDirectory = Get-FolderInfoDirectoryCount -folderPath $TestFolder
+                $TargetDirectoryFileCountFile = Get-FolderInfoFilesCount -folderPath $TestFolder
                 $TargetDirectoryFileCount.text = "Zielverzeichnis Dateien: $TargetDirectoryFileCountFile Ordner: $TargetDirecotryFileCountDirectory"
                 $ResetTool.Enabled = $true
-                $verify.enabled = $true   
+                $verify.enabled = $true
+                $Compare.enabled = $true
                 
             } else{
                 $Status = (Get-Job -Name "CopyJob").State
@@ -169,7 +170,7 @@ function Test-VariablePath() {
     }
 }
 
-function Get-FolderInfoFiles() {
+function Get-FolderInfoFilesCount() {
     param(
         [Parameter(Mandatory=$true)]
         [string]$folderPath
@@ -181,7 +182,30 @@ function Get-FolderInfoFiles() {
     }
 }
 
-function Get-FolderInfoDirectory() {
+function Get-FolderInfoFiles() {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$folderPath
+    )
+    process{
+        if(Test-Path -path $folderPath){
+            return @((Get-ChildItem -Path $folderPath -Recurse -File).FullName | % { $_.Substring(2) })
+        }
+    }
+}
+
+function Test-DirectoryFiles() {
+    param(
+        [Parameter(Mandatory=$true)]
+        [array]$referenceObject,
+        [array]$differenceObject
+    )
+    process{
+        return Compare-Object -ReferenceObject $referenceObject -DifferenceObject $differenceObject -PassThru
+    }
+}
+
+function Get-FolderInfoDirectoryCount() {
     param(
         [Parameter(Mandatory=$true)]
         [string]$folderPath
@@ -240,7 +264,7 @@ $StartCopy                       = New-Object system.Windows.Forms.Button
 $StartCopy.text                  = "Kopieren starten"
 $StartCopy.width                 = 150
 $StartCopy.height                = 30
-$StartCopy.enabled               = $true
+$StartCopy.enabled               = $false
 $StartCopy.location              = New-Object System.Drawing.Point(156,195)
 $StartCopy.Font                  = New-Object System.Drawing.Font('Microsoft Sans Serif',10)
 
@@ -303,15 +327,23 @@ $objForm.MaximizeBox = $false
 $objForm.MinimizeBox = $false
 $objForm.StartPosition = "CenterScreen"
 
-$CopyTool.controls.AddRange(@($DestinationFolder,$SourceFolder,$SourceFolderSelect,$DestinationFolderSelect,$StartCopy,$ResetTool,$TextBoxLog,$verify,$SourceDirectoryFileCount,$TargetDirectoryFileCount,$JobStatus))
+$Compare                         = New-Object system.Windows.Forms.Button
+$Compare.text                    = "Vergleichen"
+$Compare.width                   = 100
+$Compare.height                  = 30
+$Compare.enabled                 = $true
+$Compare.location                = New-Object System.Drawing.Point(10,238)
+$Compare.Font                    = New-Object System.Drawing.Font('Microsoft Sans Serif',10)
+
+$CopyTool.controls.AddRange(@($DestinationFolder,$SourceFolder,$SourceFolderSelect,$DestinationFolderSelect,$StartCopy,$ResetTool,$TextBoxLog,$verify,$SourceDirectoryFileCount,$TargetDirectoryFileCount,$JobStatus,$Compare))
 
 #region Logic 
 $SourceFolderSelect.Add_Click({  
     $sourceFolderURL = Get-Folder
     $SourceFolder.text = $sourceFolderURL
     if($sourceFolderURL -ne ""){
-        $SourceDirecotryFileCountDirectory = Get-FolderInfoDirectory -folderPath $SourceFolder.Text
-        $SourceDirectoryFileCountFile = Get-FolderInfoFiles -folderPath $SourceFolder.Text
+        $SourceDirecotryFileCountDirectory = Get-FolderInfoDirectoryCount -folderPath $SourceFolder.Text
+        $SourceDirectoryFileCountFile = Get-FolderInfoFilesCount -folderPath $SourceFolder.Text
         $SourceDirectoryFileCount.text = "Quellverzeichnis Dateien: $SourceDirectoryFileCountFile Ordner: $SourceDirecotryFileCountDirectory"
     }
   })
@@ -337,6 +369,7 @@ $StartCopy.Add_Click({
     $TargetDirectoryFileCount.text = "Zielverzeichnis"
     $verify.enabled = $true
     $TextBoxLog.Text = ""
+    $Compare.enabled = $false
  })
 
 
@@ -363,6 +396,26 @@ $StartCopy.Add_Click({
   $JobStatus.Add_Click({
     Get-CopyStatus -jobname "CopyJob"
   })
+
+  $Compare.Add_Click({ 
+    if(Test-VariablePath -Path $SourceFolder.Text){
+        $SourceFolderName = Get-FolderName -Source $SourceFolder.Text
+        $TestFolder = $DestinationFolder.text + $SourceFolderName
+        if(Test-VariablePath -Path $TestFolder){
+            $reference = Get-FolderInfoFiles -folderPath $SourceFolder.Text
+            $difference = Get-FolderInfoFiles -folderPath $DestinationFolder.Text
+            if($reference.Count -ne $difference.Count) {
+                Test-DirectoryFiles -referenceObject $reference -differenceObject $difference | Out-GridView
+            } else {
+                logmsg -logtext "Anzahl der Files ist korrekt."
+            }
+        } else {
+            logmsg -logtext "Verzeichnis wurde noch nicht kopiert."
+        }
+    } else {
+        logmsg -logtext "Die Verzeichnisse sind nicht gesetzt."
+    } 
+   })
 
 #endregion
 
